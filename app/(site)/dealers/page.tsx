@@ -47,8 +47,8 @@ export default async function DealersPage({
             align="center"
           />
 
-          <form action="/dealers" className="mx-auto mt-10 flex max-w-xl gap-2">
-            <div className="relative flex-1">
+          <form action="/dealers" className="mx-auto mt-10 flex max-w-xl flex-col gap-2 min-[400px]:flex-row">
+            <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-chalk-500" />
               <input
                 type="search"
@@ -58,7 +58,7 @@ export default async function DealersPage({
                 className="w-full rounded-full border border-white/[0.12] bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white placeholder:text-chalk-600 focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/25"
               />
             </div>
-            <button type="submit" className="btn-primary btn-sm px-6">
+            <button type="submit" className="btn-primary btn-sm px-6 py-3 min-[400px]:py-0">
               Search
             </button>
           </form>
@@ -132,7 +132,7 @@ export default async function DealersPage({
       </section>
 
       <section id="service" className="py-20 sm:py-24">
-        <div className="container-vv grid gap-4 lg:grid-cols-2">
+        <div className="container-vv grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="panel p-8 sm:p-10">
             <Wrench className="h-6 w-6 text-brand" />
             <h2 className="heading-md mt-5 text-white">Service & warranty</h2>

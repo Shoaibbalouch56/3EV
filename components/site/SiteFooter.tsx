@@ -38,7 +38,7 @@ export function SiteFooter() {
       <div className="pointer-events-none absolute left-1/2 top-0 h-px w-2/3 -translate-x-1/2 bg-gradient-to-r from-transparent via-brand/70 to-transparent" />
       <div className="pointer-events-none absolute -top-48 left-1/2 h-80 w-[46rem] -translate-x-1/2 rounded-full bg-brand/10 blur-[110px]" />
       <div className="container-vv py-14 sm:py-16">
-        <div className="grid gap-12 lg:grid-cols-[1.4fr_2fr]">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1.4fr_2fr]">
           <div>
             <div className="flex items-center gap-3">
               <span className="relative">

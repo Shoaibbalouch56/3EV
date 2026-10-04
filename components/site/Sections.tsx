@@ -189,7 +189,7 @@ export function SafetySection() {
   return (
     <section id="safety" className="relative py-20 sm:py-28">
       <div className="container-vv">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
           <Reveal>
             <SectionHeading
               eyebrow="Safety"
@@ -276,7 +276,7 @@ export function NetworkSection({ dealerCount = 32 }: { dealerCount?: number }) {
   return (
     <section id="network" className="py-20 sm:py-28">
       <div className="container-vv">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
           <Reveal>
             <SectionHeading
               eyebrow="Sales & service network"

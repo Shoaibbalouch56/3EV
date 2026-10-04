@@ -98,7 +98,7 @@ export default function FounderPage() {
       </section>
 
       <section className="py-16 sm:py-20">
-        <div className="container-vv grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+        <div className="container-vv grid grid-cols-1 gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
           <Reveal>
             <article className="panel p-7 sm:p-10">
               <span className="eyebrow">Now</span>
@@ -174,7 +174,7 @@ export default function FounderPage() {
             title={<>How Subaru of America was built</>}
             copy="From comments Malcolm Bricklin has posted publicly."
           />
-          <div className="mt-12 grid gap-4 lg:grid-cols-2">
+          <div className="mt-12 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {WORDS.map((item, i) => (
               <Reveal key={item.when} delay={i * 80}>
                 <blockquote className="panel flex h-full flex-col p-7 sm:p-9">

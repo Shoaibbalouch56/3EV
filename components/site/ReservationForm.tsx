@@ -93,7 +93,7 @@ export function ReservationForm() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_400px]">
       <div className="panel p-6 sm:p-8">
         {/* Stepper */}
         <ol className="flex items-center gap-3">

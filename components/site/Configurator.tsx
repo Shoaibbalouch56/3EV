@@ -59,9 +59,9 @@ export function Configurator() {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-8 lg:grid-cols-[1.35fr_1fr]">
+        <div className="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-[1.35fr_1fr]">
           {/* Visual */}
-          <div className="panel depth-stage relative min-h-[520px] overflow-hidden lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:max-h-[760px]">
+          <div className="panel depth-stage relative min-h-[420px] min-w-0 overflow-hidden sm:min-h-[520px] lg:sticky lg:top-24 lg:h-[calc(100vh-8rem)] lg:max-h-[760px]">
             <div
               className="pointer-events-none absolute inset-0 z-10 opacity-60 transition-colors duration-700"
               style={{ background: `radial-gradient(ellipse 70% 60% at 50% 30%, ${color.hex}22, transparent 70%)` }}
@@ -75,8 +75,8 @@ export function Configurator() {
               className="absolute inset-0 h-full w-full"
             />
 
-            <div className="absolute left-5 top-5 z-20 flex items-center gap-2">
-              <span className="pointer-events-none rounded-full border border-white/10 bg-black/30 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-chalk-300 backdrop-blur-xl">
+            <div className="absolute left-3 top-3 z-20 flex flex-wrap items-center gap-2 sm:left-5 sm:top-5">
+              <span className="pointer-events-none hidden rounded-full border border-white/10 bg-black/30 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-chalk-300 backdrop-blur-xl min-[380px]:inline-block">
                 Live 3D configuration
               </span>
               <button
@@ -124,7 +124,7 @@ export function Configurator() {
           </div>
 
           {/* Options */}
-          <div className="panel flex flex-col p-6 sm:p-8">
+          <div className="panel flex min-w-0 flex-col p-5 sm:p-8">
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-chalk-500">Trim</h3>
             <div className="mt-4 space-y-3">
               {TRIMS.map((t) => {
@@ -182,9 +182,9 @@ export function Configurator() {
             </div>
 
             <div className="mt-8 rounded-xl border border-white/10 bg-ink-900/70 p-5">
-              <div className="flex items-end justify-between">
+              <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
                 <span className="text-xs uppercase tracking-[0.16em] text-chalk-500">Estimated total</span>
-                <span className="font-display text-3xl font-semibold tracking-[-0.02em] text-white">
+                <span className="font-display text-2xl font-semibold tracking-[-0.02em] text-white min-[360px]:text-3xl">
                   {currency(total)}
                 </span>
               </div>

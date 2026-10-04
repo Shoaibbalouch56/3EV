@@ -44,7 +44,7 @@ export function Hero() {
       <div className="pointer-events-none absolute inset-0 bg-grid-dark bg-[size:80px_80px] opacity-20 mask-fade-b" />
 
       <div className="container-vv relative z-10 flex min-h-[700px] items-center sm:min-h-[760px]">
-        <div className="max-w-2xl py-12">
+        <div className="w-full min-w-0 max-w-2xl py-12">
           <div className="animate-fade-up" style={at(1300)}>
             <span className="eyebrow glass-depth">
               <span className="relative flex h-1.5 w-1.5">
@@ -55,7 +55,7 @@ export function Hero() {
             </span>
           </div>
 
-          <p className="mt-7 animate-fade-up font-mono text-xs uppercase tracking-[0.34em] text-brand" style={at(1400)}>
+          <p className="mt-7 animate-fade-up font-mono text-[11px] uppercase tracking-[0.2em] text-brand min-[360px]:text-xs sm:tracking-[0.34em]" style={at(1400)}>
             Introducing the Bricklin 3EV
           </p>
           <h1 className="heading-xl mt-5" aria-label="The price of fabulous, redefined.">
@@ -93,11 +93,11 @@ export function Hero() {
             </Link>
           </div>
 
-          <div className="mt-12 grid max-w-xl animate-fade-up grid-cols-3 gap-2" style={at(2750)}>
+          <div className="mt-12 grid max-w-xl animate-fade-up grid-cols-3 gap-1.5 min-[360px]:gap-2" style={at(2750)}>
             {HERO_STATS.map(({ icon: Icon, value, unit, label }) => (
-              <div key={label} className="glass-depth rounded-2xl px-3 py-4 sm:px-5">
+              <div key={label} className="glass-depth min-w-0 rounded-2xl px-2.5 py-4 min-[360px]:px-3 sm:px-5">
                 <Icon className="h-4 w-4 text-brand" />
-                <p className="mt-3 font-display text-xl font-semibold tracking-[-0.02em] text-white sm:text-2xl">
+                <p className="mt-3 font-display text-base font-semibold tracking-[-0.02em] text-white min-[360px]:text-xl sm:text-2xl">
                   {value}
                   <span className="ml-1 text-xs font-medium text-chalk-500 sm:text-sm">{unit}</span>
                 </p>

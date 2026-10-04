@@ -37,8 +37,8 @@ export default function Model3EVPage() {
         </div>
 
         <div className="container-vv">
-          <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr]">
-            <div className="animate-fade-up">
+          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.05fr_1fr]">
+            <div className="min-w-0 animate-fade-up">
               <span className="eyebrow">The vehicle</span>
               <h1 className="heading-xl mt-6 text-gradient">Bricklin 3EV</h1>
               <p className="body-lg mt-6 max-w-xl">

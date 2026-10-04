@@ -166,9 +166,9 @@ export function BarChart({
     format === 'currency' ? currency(v, { compact: true }) : number(v);
 
   return (
-    <div className="flex items-end gap-2" style={{ height }}>
+    <div className="flex items-end gap-1 sm:gap-2" style={{ height }}>
       {data.map((d) => (
-        <div key={d.label} className="group flex h-full flex-1 flex-col items-center justify-end gap-2">
+        <div key={d.label} className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
           <span className="text-[10px] font-medium text-chalk-400 opacity-0 transition group-hover:opacity-100">
             {valueFormat(d.value)}
           </span>

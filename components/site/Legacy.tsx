@@ -37,7 +37,7 @@ export function LegacySection() {
     <section className="relative overflow-hidden py-20 sm:py-28">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_20%,rgba(63,169,255,0.10),transparent_70%)]" />
       <div className="container-vv">
-        <div className="grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-end">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_1fr] lg:items-end">
           <SectionHeading
             eyebrow="The Bricklin legacy"
             title={<>Five decades of putting new cars on American roads</>}
