@@ -13,9 +13,9 @@ const TRIMS = [
 ];
 
 const COLORS = [
+  { name: 'Visionary Pearl', hex: '#EEF1F5' },
   { name: 'Safety Orange', hex: '#FF6A1F' },
   { name: 'Signal Red', hex: '#E11D2E' },
-  { name: 'Arctic White', hex: '#E9EDF2' },
   { name: 'Obsidian', hex: '#15171C' },
   { name: 'Pacific Blue', hex: '#1E5FA8' },
   { name: 'Titanium', hex: '#8D95A3' },

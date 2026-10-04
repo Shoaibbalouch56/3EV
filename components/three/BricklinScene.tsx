@@ -7,7 +7,6 @@ import {
   Environment,
   Float,
   Lightformer,
-  MeshReflectorMaterial,
   OrbitControls,
   RoundedBox,
   Sparkles,
@@ -364,8 +363,6 @@ function Vehicle({
         roughness: 0.14,
         clearcoat: 1,
         clearcoatRoughness: 0.04,
-        sheen: 0.4,
-        sheenColor: new THREE.Color('#ffffff'),
       }),
     [color],
   );
@@ -542,10 +539,12 @@ function Studio({
   doorsOpen,
   progressRef,
   intro,
+  lowPower,
 }: Required<Pick<BricklinSceneProps, 'color' | 'accent' | 'preset' | 'interactive' | 'sport' | 'doorsOpen'>> & {
   animate: boolean;
   progressRef?: MutableRefObject<number>;
   intro: boolean;
+  lowPower: boolean;
 }) {
   const playIntro = intro && animate;
   const [arriving, setArriving] = useState(playIntro);
@@ -567,12 +566,12 @@ function Studio({
       <color attach="background" args={['#06070a']} />
       <fog attach="fog" args={['#06070a', portrait ? 16 : 9, portrait ? 34 : 18]} />
       <ambientLight intensity={0.5} />
-      <spotLight position={[-4, 6, 5]} intensity={60} angle={0.42} penumbra={0.8} color="#ffffff" castShadow shadow-mapSize={[1024, 1024]} />
+      <spotLight position={[-4, 6, 5]} intensity={60} angle={0.42} penumbra={0.8} color="#ffffff" />
       <spotLight position={[4, 2.5, -4]} intensity={40} angle={0.6} penumbra={1} color={accent} />
       <pointLight position={[-3.5, 0.6, -2]} intensity={6} color="#3fa9ff" />
 
       {/* Studio light panels: give the clear-coat something to reflect (no network fetch). */}
-      <Environment resolution={256} frames={1}>
+      <Environment resolution={lowPower ? 128 : 256} frames={1}>
         <Lightformer form="rect" intensity={6} position={[0, 5, 0]} rotation-x={Math.PI / 2} scale={[10, 3, 1]} />
         <Lightformer form="rect" intensity={4} position={[-5, 1.5, 2]} rotation-y={Math.PI / 2} scale={[10, 1.5, 1]} />
         <Lightformer form="rect" intensity={3} position={[5, 1.5, 0]} rotation-y={-Math.PI / 2} scale={[10, 1.5, 1]} />
@@ -580,7 +579,7 @@ function Studio({
         <Lightformer form="ring" color={accent} intensity={4} position={[0, 2, -6]} scale={3} />
       </Environment>
 
-      <Sparkles count={preset === 'hero' ? 40 : 16} scale={[9, 3, 6]} size={1.4} speed={animate ? 0.16 : 0} color="#ffffff" opacity={0.25} />
+      <Sparkles count={lowPower ? 10 : preset === 'hero' ? 40 : 16} scale={[9, 3, 6]} size={1.4} speed={animate ? 0.16 : 0} color="#ffffff" opacity={0.25} />
       <MotionContext.Provider value={motion}>
       {playIntro && arriving && <HeroArrival motion={motion} onDone={() => setArriving(false)} />}
       <group position={offset}>
@@ -605,26 +604,14 @@ function Studio({
           <ringGeometry args={[2.55, 2.6, 128]} />
           <meshBasicMaterial color={accent} transparent opacity={0.35} toneMapped={false} />
         </mesh>
-        <ContactShadows position={[0, -0.57, 0]} opacity={0.75} scale={7} blur={2.4} far={4} color="#000000" />
+        <ContactShadows position={[0, -0.57, 0]} opacity={0.75} scale={7} blur={2.4} far={4} resolution={256} color="#000000" />
       </group>
       </MotionContext.Provider>
 
       {/* Glossy showroom floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.58, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.58, 0]}>
         <planeGeometry args={[120, 120]} />
-        <MeshReflectorMaterial
-          resolution={512}
-          blur={[400, 120]}
-          mixBlur={1}
-          mixStrength={6}
-          roughness={0.85}
-          depthScale={1}
-          minDepthThreshold={0.4}
-          maxDepthThreshold={1.2}
-          color="#07080c"
-          metalness={0.6}
-          mirror={0}
-        />
+        <meshStandardMaterial color="#07080c" metalness={0.7} roughness={0.32} />
       </mesh>
 
       {progressRef && <CameraRig progressRef={progressRef} />}
@@ -664,7 +651,11 @@ export function BricklinScene({
   intro = false,
 }: BricklinSceneProps) {
   const [webgl, setWebgl] = useState<boolean | null>(null);
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
+  // The WebGL context is only created once the stage first nears the viewport.
+  // A stage hidden with display:none (e.g. the desktop hero on phones) never mounts one.
+  const [mounted, setMounted] = useState(false);
+  const [lowPower, setLowPower] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const stage = useRef<HTMLDivElement>(null);
 
@@ -681,15 +672,26 @@ export function BricklinScene({
     updateMotion();
     motion.addEventListener('change', updateMotion);
 
-    const observer = new IntersectionObserver(
-      ([entry]) => setVisible(entry.isIntersecting),
-      { rootMargin: '160px 0px', threshold: 0.01 },
+    setLowPower(window.matchMedia('(max-width: 767px), (pointer: coarse)').matches);
+
+    // Create the context a little ahead of time so shaders compile before the stage scrolls in...
+    const mountObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setMounted(true);
+      },
+      { rootMargin: '500px 0px', threshold: 0 },
     );
-    if (stage.current) observer.observe(stage.current);
+    // ...but only draw frames while it is actually on screen.
+    const renderObserver = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0 });
+    if (stage.current) {
+      mountObserver.observe(stage.current);
+      renderObserver.observe(stage.current);
+    }
 
     return () => {
       motion.removeEventListener('change', updateMotion);
-      observer.disconnect();
+      mountObserver.disconnect();
+      renderObserver.disconnect();
     };
   }, []);
 
@@ -711,15 +713,15 @@ export function BricklinScene({
 
   return (
     <div ref={stage} className={`relative bg-[#06070a] ${className}`} aria-label="Interactive 3D model of the Bricklin 3EV">
-      {webgl === null && (
+      {(webgl === null || !mounted) && (
         <div className="absolute inset-0 z-10 flex items-center justify-center">
           <span className="h-7 w-7 animate-spin rounded-full border-2 border-white/15 border-t-brand" />
         </div>
       )}
+      {mounted && (
       <Canvas
-        shadows
         frameloop={visible ? 'always' : 'never'}
-        dpr={[1, 1.5]}
+        dpr={lowPower ? 1 : [1, 1.5]}
         camera={camera}
         gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', toneMapping: THREE.ACESFilmicToneMapping }}
         performance={{ min: 0.5 }}
@@ -735,9 +737,11 @@ export function BricklinScene({
             doorsOpen={doorsOpen}
             progressRef={progressRef}
             intro={intro}
+            lowPower={lowPower}
           />
         </Suspense>
       </Canvas>
+      )}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-ink-950 to-transparent" />
     </div>
   );
