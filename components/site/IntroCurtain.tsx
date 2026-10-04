@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Logo } from './Logo';
+import { markIntroDone } from '@/lib/intro';
 
 const SEEN_KEY = 'vv-intro-seen';
 
@@ -18,9 +19,13 @@ export function IntroCurtain() {
     }
     if (seen) {
       setPhase('gone');
+      markIntroDone();
       return;
     }
-    const leave = setTimeout(() => setPhase('leave'), 1900);
+    const leave = setTimeout(() => {
+      setPhase('leave');
+      markIntroDone();
+    }, 1900);
     const gone = setTimeout(() => {
       setPhase('gone');
       // Mark as seen only once it has played, so a re-run effect doesn't skip it.
@@ -41,7 +46,10 @@ export function IntroCurtain() {
   return (
     <div
       aria-hidden="true"
-      onClick={() => setPhase('gone')}
+      onClick={() => {
+        setPhase('gone');
+        markIntroDone();
+      }}
       className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink-950 transition-all duration-700 ease-[cubic-bezier(0.7,0,0.2,1)] ${
         phase === 'leave' ? 'pointer-events-none -translate-y-full' : ''
       }`}

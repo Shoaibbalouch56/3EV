@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { Suspense, createContext, useContext, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import {
   ContactShadows,
@@ -14,6 +14,7 @@ import {
 } from '@react-three/drei';
 import * as THREE from 'three';
 import { BricklinCar } from '@/components/site/BricklinCar';
+import { useIntroDone } from '@/lib/intro';
 
 type ScenePreset = 'hero' | 'configurator' | 'detail';
 
@@ -28,6 +29,8 @@ type BricklinSceneProps = {
   doorsOpen?: boolean;
   /** 0–1 scroll progress. When set, the camera flies through STORY_SHOTS instead of orbiting. */
   progressRef?: MutableRefObject<number>;
+  /** Play the cinematic arrival (camera sweep, light-up, speed streaks) once the page intro lifts. */
+  intro?: boolean;
 };
 
 type Vec3 = [number, number, number];
@@ -35,11 +38,28 @@ type Vec3 = [number, number, number];
 const PEARL = '#eef1f5';
 const RIM_ACCENT = '#3fa9ff';
 
+/* -------------------------------------------------------------- Motion */
+
+/** Shared, per-frame animation state. power: lights 0–1. speed: road speed (units/s). pulse: arrival ring 0–1. */
+type Motion = { power: number; speed: number; pulse: number };
+const MotionContext = createContext<MutableRefObject<Motion> | null>(null);
+
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
 /* --------------------------------------------------------------- Parts */
 
 function Wheel({ position, sport = false }: { position: Vec3; sport?: boolean }) {
+  const motion = useContext(MotionContext);
+  const spin = useRef<THREE.Group>(null);
+  useFrame((_, delta) => {
+    // Rolling toward -X: positive Z rotation. Rolling radius ≈ tyre outer radius.
+    if (spin.current && motion) spin.current.rotation.z += (motion.current.speed / 0.46) * delta;
+  });
+
   return (
     <group position={position}>
+      <group ref={spin}>
       {/* Tyre: torus lies in XY, so its axle already points along Z (sideways). */}
       <mesh castShadow>
         <torusGeometry args={[0.34, 0.12, 18, 48]} />
@@ -57,17 +77,20 @@ function Wheel({ position, sport = false }: { position: Vec3; sport?: boolean })
         <cylinderGeometry args={[0.07, 0.07, 0.16, 20]} />
         <meshStandardMaterial color="#e11d2e" roughness={0.3} metalness={0.65} />
       </mesh>
+      </group>
     </group>
   );
 }
 
 /** One of the two big front intakes, with a turbine fan that spins. */
 function TurbineIntake({ z, animate }: { z: number; animate: boolean }) {
+  const motion = useContext(MotionContext);
   const fan = useRef<THREE.Group>(null);
   const blades = useMemo(() => Array.from({ length: 9 }, (_, i) => (i / 9) * Math.PI * 2), []);
 
   useFrame((_, delta) => {
-    if (fan.current && animate) fan.current.rotation.x += delta * 2.2 * Math.sign(z || 1);
+    const power = motion ? motion.current.power : 1;
+    if (fan.current && animate) fan.current.rotation.x += delta * (0.4 + power * 2.2 + (motion?.current.speed ?? 0) * 0.3) * Math.sign(z || 1);
   });
 
   return (
@@ -99,11 +122,129 @@ function TurbineIntake({ z, animate }: { z: number; animate: boolean }) {
 }
 
 function Emissive({ args, position, rotation = [0, 0, 0], color }: { args: Vec3; position: Vec3; rotation?: Vec3; color: string }) {
+  const motion = useContext(MotionContext);
+  const mat = useRef<THREE.MeshStandardMaterial>(null);
+  useFrame(() => {
+    if (mat.current && motion) mat.current.emissiveIntensity = 5 * motion.current.power;
+  });
+
   return (
     <RoundedBox args={args} radius={Math.min(...args) / 2.2} smoothness={3} position={position} rotation={rotation}>
-      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={5} toneMapped={false} />
+      <meshStandardMaterial ref={mat} color="#2a2e35" emissive={color} emissiveIntensity={5} toneMapped={false} />
     </RoundedBox>
   );
+}
+
+/** Light streaks running along the floor: the car reads as moving while they flow. */
+function SpeedStreaks({ accent }: { accent: string }) {
+  const motion = useContext(MotionContext);
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  const COUNT = 80;
+  const streaks = useMemo(
+    () =>
+      Array.from({ length: COUNT }, (_, i) => ({
+        x: Math.random() * 28 - 14,
+        z: (i % 2 ? 1 : -1) * (1.25 + Math.random() * 6),
+        len: 0.5 + Math.random() * 2,
+      })),
+    [],
+  );
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  useFrame((_, delta) => {
+    const m = mesh.current;
+    if (!m || !motion) return;
+    const v = motion.current.speed;
+    const stretch = 0.25 + Math.min(v / 8, 2.2);
+    for (let i = 0; i < COUNT; i++) {
+      const d = streaks[i];
+      d.x += v * delta;
+      if (d.x > 14) d.x -= 28;
+      dummy.position.set(d.x, -0.565, d.z);
+      dummy.scale.set(d.len * stretch, 1, 1);
+      dummy.updateMatrix();
+      m.setMatrixAt(i, dummy.matrix);
+    }
+    m.instanceMatrix.needsUpdate = true;
+    (m.material as THREE.MeshBasicMaterial).opacity = Math.min(0.9, 0.12 + v / 14);
+  });
+
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, COUNT]} frustumCulled={false}>
+      <boxGeometry args={[1, 0.006, 0.022]} />
+      <meshBasicMaterial color={accent === '#e11d2e' ? '#d6e9ff' : accent} transparent opacity={0.4} toneMapped={false} depthWrite={false} />
+    </instancedMesh>
+  );
+}
+
+/** Ring of light that ripples out when the car comes to rest. */
+function ArrivalPulse({ accent }: { accent: string }) {
+  const motion = useContext(MotionContext);
+  const ring = useRef<THREE.Mesh>(null);
+  useFrame(() => {
+    if (!ring.current || !motion) return;
+    const p = motion.current.pulse;
+    ring.current.visible = p > 0 && p < 1;
+    ring.current.scale.setScalar(1 + easeOutCubic(p) * 3.2);
+    (ring.current.material as THREE.MeshBasicMaterial).opacity = (1 - p) * 0.85;
+  });
+  return (
+    <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.56, 0]} visible={false}>
+      <ringGeometry args={[2.2, 2.32, 128]} />
+      <meshBasicMaterial color={accent} transparent opacity={0} toneMapped={false} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/**
+ * Cinematic arrival: the camera swings in from low and close while the road streaks past,
+ * lights flicker on, the car brakes to a stop and a light ring ripples out.
+ */
+const ARRIVAL_SECONDS = 3.8;
+const TOP_SPEED = 30;
+
+function HeroArrival({ motion, onDone }: { motion: MutableRefObject<Motion>; onDone: () => void }) {
+  const camera = useThree((st) => st.camera);
+  const ready = useIntroDone();
+  const started = useRef<number | null>(null);
+  const finished = useRef(false);
+  const plan = useMemo(() => {
+    const target = new THREE.Vector3(0, 0.5, 0);
+    const end = new THREE.Spherical().setFromVector3(camera.position.clone().sub(target));
+    const from = new THREE.Spherical(end.radius * 0.52, Math.min(end.phi + 0.3, 1.5), end.theta - 1.35);
+    return { target, end, from, now: new THREE.Spherical() };
+  }, [camera]);
+
+  useFrame((state) => {
+    if (finished.current) return;
+    const { target, end, from, now } = plan;
+    const e = ready ? state.clock.elapsedTime - (started.current ??= state.clock.elapsedTime) : 0;
+    const t = Math.min(1, e / ARRIVAL_SECONDS);
+    const k = easeInOutCubic(t);
+
+    now.set(
+      THREE.MathUtils.lerp(from.radius, end.radius, k),
+      THREE.MathUtils.lerp(from.phi, end.phi, k),
+      THREE.MathUtils.lerp(from.theta, end.theta, k),
+    );
+    camera.position.setFromSpherical(now).add(target);
+    camera.lookAt(target);
+
+    // Lights: flicker on between 0.35s and 1.3s.
+    const lt = (e - 0.35) / 0.95;
+    motion.current.power = lt <= 0 ? 0 : lt >= 1 ? 1 : Math.random() < lt ? lt : 0.08;
+    // Road: full speed, braking to a crawl.
+    motion.current.speed = 0.6 + (TOP_SPEED - 0.6) * (1 - easeOutCubic(t));
+    motion.current.pulse = Math.max(0, Math.min(1, (e - (ARRIVAL_SECONDS - 0.7)) / 1.5));
+
+    if (e >= ARRIVAL_SECONDS + 0.8) {
+      finished.current = true;
+      motion.current.pulse = 1;
+      onDone();
+    }
+  });
+
+  return null;
 }
 
 /* ------------------------------------------------------------ Geometry */
@@ -203,6 +344,7 @@ function Vehicle({
   sport,
   animate,
   doorsOpen,
+  scrollSpin = false,
 }: {
   color: string;
   accent: string;
@@ -210,6 +352,8 @@ function Vehicle({
   sport: boolean;
   animate: boolean;
   doorsOpen: boolean;
+  /** Turn the car as the visitor scrolls away from the hero. */
+  scrollSpin?: boolean;
 }) {
   const group = useRef<THREE.Group>(null);
   const paint = useMemo(
@@ -255,7 +399,8 @@ function Vehicle({
 
   useFrame((state, delta) => {
     if (!group.current || !interactive || !animate) return;
-    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, 0.15 + state.pointer.x * 0.16, 4, delta);
+    const scrolled = scrollSpin ? Math.min(window.scrollY / window.innerHeight, 1.2) * 0.9 : 0;
+    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, 0.15 + state.pointer.x * 0.16 + scrolled, 4, delta);
     group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, state.pointer.y * 0.04, 4, delta);
   });
 
@@ -396,10 +541,15 @@ function Studio({
   animate,
   doorsOpen,
   progressRef,
+  intro,
 }: Required<Pick<BricklinSceneProps, 'color' | 'accent' | 'preset' | 'interactive' | 'sport' | 'doorsOpen'>> & {
   animate: boolean;
   progressRef?: MutableRefObject<number>;
+  intro: boolean;
 }) {
+  const playIntro = intro && animate;
+  const [arriving, setArriving] = useState(playIntro);
+  const motion = useRef<Motion>({ power: playIntro ? 0 : 1, speed: playIntro ? TOP_SPEED : preset === 'hero' ? 0.6 : 0, pulse: 0 });
   const ring = useRef<THREE.Mesh>(null);
   const wide = useThree((s) => s.size.width >= 1024);
   const portrait = useThree((s) => s.size.width < s.size.height);
@@ -431,8 +581,24 @@ function Studio({
       </Environment>
 
       <Sparkles count={preset === 'hero' ? 40 : 16} scale={[9, 3, 6]} size={1.4} speed={animate ? 0.16 : 0} color="#ffffff" opacity={0.25} />
+      <MotionContext.Provider value={motion}>
+      {playIntro && arriving && <HeroArrival motion={motion} onDone={() => setArriving(false)} />}
       <group position={offset}>
-        <Vehicle color={color} accent={accent} interactive={interactive} sport={sport} animate={animate} doorsOpen={doorsOpen} />
+        <Vehicle
+          color={color}
+          accent={accent}
+          interactive={interactive && !arriving}
+          sport={sport}
+          animate={animate}
+          doorsOpen={doorsOpen}
+          scrollSpin={preset === 'hero'}
+        />
+        {(preset === 'hero' || intro) && (
+          <group rotation={[0, 0.15, 0]}>
+            <SpeedStreaks accent={accent} />
+          </group>
+        )}
+        {intro && <ArrivalPulse accent={accent} />}
 
         {/* Glowing turntable ring */}
         <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.565, 0]}>
@@ -441,6 +607,7 @@ function Studio({
         </mesh>
         <ContactShadows position={[0, -0.57, 0]} opacity={0.75} scale={7} blur={2.4} far={4} color="#000000" />
       </group>
+      </MotionContext.Provider>
 
       {/* Glossy showroom floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.58, 0]} receiveShadow>
@@ -465,6 +632,7 @@ function Studio({
       {interactive && !progressRef && (
         <OrbitControls
           makeDefault
+          enabled={!arriving}
           enablePan={false}
           enableZoom={preset !== 'hero'}
           minDistance={4.6}
@@ -473,7 +641,7 @@ function Studio({
           maxPolarAngle={Math.PI / 2.1}
           minAzimuthAngle={preset === 'hero' ? -Math.PI / 2.4 : -Infinity}
           maxAzimuthAngle={preset === 'hero' ? Math.PI / 2.4 : Infinity}
-          autoRotate={animate && preset !== 'hero'}
+          autoRotate={animate && preset !== 'hero' && !arriving}
           autoRotateSpeed={0.5}
           target={[0, 0.5, 0]}
         />
@@ -493,6 +661,7 @@ export function BricklinScene({
   sport = false,
   doorsOpen = false,
   progressRef,
+  intro = false,
 }: BricklinSceneProps) {
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [visible, setVisible] = useState(true);
@@ -565,6 +734,7 @@ export function BricklinScene({
             animate={!reducedMotion}
             doorsOpen={doorsOpen}
             progressRef={progressRef}
+            intro={intro}
           />
         </Suspense>
       </Canvas>

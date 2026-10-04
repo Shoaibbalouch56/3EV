@@ -298,3 +298,30 @@
 .intro-line { animation: intro-draw 1.1s cubic-bezier(0.7, 0, 0.2, 1) 0.5s both; }
 .intro-sub { animation: fade-in 0.8s ease 0.9s both; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Hero: word-by-word headline reveal */
+.reveal-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+.reveal-word > span {
+  display: inline-block;
+  animation: reveal-up 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes reveal-up {
+  from {
+    transform: translateY(110%) rotate(5deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+/* Hold every hero animation until the intro curtain lifts (lib/intro.ts sets the attribute). */
+html:not([data-intro='done']) .hero-stage * {
+  animation-play-state: paused !important;
+}
