@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Move3D } from 'lucide-react';
-import { BricklinScene } from '@/components/three/BricklinScene';
+import { LazyBricklinScene } from '@/components/three/LazyBricklinScene';
 import { Configurator } from '@/components/site/Configurator';
 import {
   FeatureGrid,
@@ -70,7 +70,7 @@ export default function Model3EVPage() {
 
             <Reveal delay={120}>
               <div className="depth-stage relative h-[460px] overflow-hidden rounded-[2rem] border border-white/[0.08] sm:h-[560px]">
-                <BricklinScene preset="detail" className="absolute inset-0 h-full w-full" />
+                <LazyBricklinScene preset="detail" className="absolute inset-0 h-full w-full" />
                 <div className="pointer-events-none absolute bottom-5 right-5 flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-4 py-2 text-[10px] uppercase tracking-[0.16em] text-chalk-400 backdrop-blur-xl">
                   <Move3D className="h-3.5 w-3.5 text-brand" />
                   Explore in 3D

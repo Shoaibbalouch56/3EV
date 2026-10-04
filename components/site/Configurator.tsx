@@ -76,14 +76,14 @@ export function Configurator() {
             />
 
             <div className="absolute left-3 top-3 z-20 flex flex-wrap items-center gap-2 sm:left-5 sm:top-5">
-              <span className="pointer-events-none hidden rounded-full border border-white/10 bg-black/30 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-chalk-300 backdrop-blur-xl min-[380px]:inline-block">
+              <span className="pointer-events-none hidden rounded-full border border-white/10 bg-black/55 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-chalk-300 min-[380px]:inline-block">
                 Live 3D configuration
               </span>
               <button
                 type="button"
                 onClick={() => setDoorsOpen((v) => !v)}
                 aria-pressed={doorsOpen}
-                className="flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-xl transition hover:border-brand/60 hover:bg-brand/20"
+                className="flex items-center gap-2 rounded-full border border-white/15 bg-black/60 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white transition hover:border-brand/60 hover:bg-brand/20"
               >
                 <DoorOpen className="h-3.5 w-3.5 text-brand" />
                 {doorsOpen ? 'Close doors' : 'Open doors'}

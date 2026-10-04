@@ -118,12 +118,12 @@ export function Hero() {
           type="button"
           onClick={() => setDoorsOpen((v) => !v)}
           aria-pressed={doorsOpen}
-          className="flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-xl transition hover:border-brand/60 hover:bg-brand/20"
+          className="flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white transition hover:border-brand/60 hover:bg-brand/20"
         >
           <DoorOpen className="h-4 w-4 text-brand" />
           {doorsOpen ? 'Close gullwings' : 'Open gullwings'}
         </button>
-        <span className="pointer-events-none hidden items-center gap-2 rounded-full border border-white/10 bg-black/25 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-chalk-400 backdrop-blur-xl lg:flex">
+        <span className="pointer-events-none hidden items-center gap-2 rounded-full border border-white/10 bg-black/25 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-chalk-400 lg:flex">
           <Move3D className="h-4 w-4 text-brand" />
           Drag to explore
         </span>
