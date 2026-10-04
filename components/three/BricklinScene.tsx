@@ -71,7 +71,7 @@ function TurbineIntake({ z, animate }: { z: number; animate: boolean }) {
   });
 
   return (
-    <group position={[-1.9, 0.6, z]}>
+    <group position={[-2.09, 0.68, z]}>
       {/* Black surround */}
       <RoundedBox args={[0.12, 0.42, 0.56]} radius={0.06} smoothness={4}>
         <meshStandardMaterial color="#05060a" roughness={0.45} metalness={0.4} />
@@ -106,28 +106,90 @@ function Emissive({ args, position, rotation = [0, 0, 0], color }: { args: Vec3;
   );
 }
 
-/** Gullwing door hinged on the roof spine. side = 1 (right / +z) or -1 (left / -z). */
-function GullwingDoor({ side, open, paint }: { side: 1 | -1; open: boolean; paint: THREE.Material }) {
+/* ------------------------------------------------------------ Geometry */
+// All profiles are side views (x = length, front at -x; y = height), extruded across the width (z).
+
+/** Lower body. Drawn 0.14 inside the final outline; the bevel rounds it back out. */
+function makeBodyGeometry() {
+  const s = new THREE.Shape();
+  s.moveTo(-1.82, 0.48);
+  s.quadraticCurveTo(-1.98, 0.5, -1.98, 0.66);
+  s.lineTo(-1.97, 0.76);
+  s.quadraticCurveTo(-1.95, 0.86, -1.76, 0.87);
+  s.lineTo(-0.9, 0.9);
+  s.lineTo(1.3, 0.88);
+  s.quadraticCurveTo(1.95, 0.86, 2.04, 0.72);
+  s.quadraticCurveTo(2.08, 0.54, 1.85, 0.5);
+  s.lineTo(-1.82, 0.48);
+  const g = new THREE.ExtrudeGeometry(s, {
+    depth: 1.3,
+    bevelEnabled: true,
+    bevelThickness: 0.16,
+    bevelSize: 0.14,
+    bevelSegments: 10,
+    curveSegments: 40,
+  });
+  g.translate(0, 0, -0.65);
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Greenhouse roofline: windshield → roof → fastback. */
+function makeRoofCurve() {
+  const path = new THREE.CurvePath<THREE.Vector2>();
+  path.add(new THREE.CubicBezierCurve(new THREE.Vector2(-0.85, 1.03), new THREE.Vector2(-0.55, 1.14), new THREE.Vector2(-0.3, 1.43), new THREE.Vector2(-0.05, 1.46)));
+  path.add(new THREE.LineCurve(new THREE.Vector2(-0.05, 1.46), new THREE.Vector2(0.6, 1.48)));
+  path.add(new THREE.CubicBezierCurve(new THREE.Vector2(0.6, 1.48), new THREE.Vector2(1.05, 1.47), new THREE.Vector2(1.5, 1.16), new THREE.Vector2(1.78, 1.01)));
+  return path.getSpacedPoints(64);
+}
+
+/** Thin curved shell following the roofline, `width` wide, centred on z = 0. */
+function makeShellGeometry(points: THREE.Vector2[], thickness: number, width: number, lift = 0) {
+  const outer = points.map((p) => new THREE.Vector2(p.x, p.y + lift));
+  const inner = outer.map((p) => new THREE.Vector2(p.x, p.y - thickness)).reverse();
+  const g = new THREE.ExtrudeGeometry(new THREE.Shape([...outer, ...inner]), {
+    depth: width,
+    bevelEnabled: true,
+    bevelThickness: 0.012,
+    bevelSize: 0.008,
+    bevelSegments: 3,
+  });
+  g.translate(0, 0, -width / 2);
+  g.computeVertexNormals();
+  return g;
+}
+
+const HINGE_Y = 1.46;
+const CABIN_HALF = 0.5;
+
+/** Side-window door panel, origin moved to the roof hinge line. */
+function makeDoorGeometry(points: THREE.Vector2[]) {
+  const g = new THREE.ExtrudeGeometry(new THREE.Shape(points.map((p) => p.clone())), {
+    depth: 0.03,
+    bevelEnabled: true,
+    bevelThickness: 0.01,
+    bevelSize: 0.01,
+    bevelSegments: 2,
+  });
+  g.translate(0, -HINGE_Y, -0.015);
+  return g;
+}
+
+/** Gullwing door hinged on the roof edge. side = 1 (right / +z) or -1 (left / -z). */
+function GullwingDoor({ side, open, geometry }: { side: 1 | -1; open: boolean; geometry: THREE.BufferGeometry }) {
   const hinge = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
     if (!hinge.current) return;
-    const target = open ? -0.95 * side : 0;
-    hinge.current.rotation.x = THREE.MathUtils.damp(hinge.current.rotation.x, target, 3.2, delta);
+    const target = open ? -2.35 * side : 0;
+    hinge.current.rotation.x = THREE.MathUtils.damp(hinge.current.rotation.x, target, 2.6, delta);
   });
 
   return (
-    <group ref={hinge} position={[0.1, 1.4, 0.2 * side]}>
-      <group position={[0, -0.24, 0.27 * side]} rotation={[-0.55 * side, 0, 0]}>
-        {/* Tinted glass */}
-        <RoundedBox args={[1.32, 0.46, 0.04]} radius={0.018} smoothness={3} castShadow>
-          <meshPhysicalMaterial color="#0d1520" roughness={0.06} metalness={0.3} clearcoat={1} transparent opacity={0.9} />
-        </RoundedBox>
-        {/* Painted lower door skin */}
-        <RoundedBox args={[1.36, 0.1, 0.06]} radius={0.03} smoothness={3} position={[0, -0.25, 0]} castShadow>
-          <primitive object={paint} attach="material" />
-        </RoundedBox>
-      </group>
+    <group ref={hinge} position={[0, HINGE_Y, CABIN_HALF * side]}>
+      <mesh geometry={geometry} castShadow>
+        <meshPhysicalMaterial color="#0c141f" roughness={0.04} metalness={0.2} clearcoat={1} transparent opacity={0.72} />
+      </mesh>
     </group>
   );
 }
@@ -154,26 +216,42 @@ function Vehicle({
     () =>
       new THREE.MeshPhysicalMaterial({
         color,
-        metalness: 0.2,
-        roughness: 0.16,
+        metalness: 0.25,
+        roughness: 0.14,
         clearcoat: 1,
-        clearcoatRoughness: 0.06,
+        clearcoatRoughness: 0.04,
         sheen: 0.4,
         sheenColor: new THREE.Color('#ffffff'),
       }),
     [color],
   );
   const stripe = useMemo(
-    () => new THREE.MeshPhysicalMaterial({ color: '#fbfcfd', roughness: 0.12, metalness: 0.2, clearcoat: 1 }),
+    () => new THREE.MeshPhysicalMaterial({ color: '#fbfcfd', roughness: 0.1, metalness: 0.15, clearcoat: 1 }),
     [],
   );
   const black = useMemo(
     () => new THREE.MeshStandardMaterial({ color: '#07090d', roughness: 0.32, metalness: 0.7 }),
     [],
   );
+  const geo = useMemo(() => {
+    const roof = makeRoofCurve();
+    return {
+      body: makeBodyGeometry(),
+      glass: makeShellGeometry(roof, 0.045, CABIN_HALF * 2),
+      spine: makeShellGeometry(roof, 0.03, 0.24, 0.018),
+      door: makeDoorGeometry(roof),
+    };
+  }, []);
 
   useEffect(() => () => paint.dispose(), [paint]);
-  useEffect(() => () => { stripe.dispose(); black.dispose(); }, [stripe, black]);
+  useEffect(
+    () => () => {
+      stripe.dispose();
+      black.dispose();
+      Object.values(geo).forEach((g) => g.dispose());
+    },
+    [stripe, black, geo],
+  );
 
   useFrame((state, delta) => {
     if (!group.current || !interactive || !animate) return;
@@ -185,77 +263,77 @@ function Vehicle({
   return (
     <group ref={group} rotation={[0, 0.15, 0]} position={[0, -0.2, 0]}>
       <Float speed={animate ? 1.1 : 0} rotationIntensity={animate ? 0.03 : 0} floatIntensity={animate ? 0.07 : 0}>
-        {/* Squash slightly: the real 3EV sits low and wide. */}
-        <group scale={[1.04, 0.86, 1.08]} position={[0, -0.08, 0]}>
-          {/* ---- Body shell ---- */}
-          <RoundedBox args={[3.4, 0.62, 1.6]} radius={0.28} smoothness={8} position={[0.05, 0.7, 0]} castShadow>
-            <primitive object={paint} attach="material" />
-          </RoundedBox>
-          {/* Broad front face */}
-          <RoundedBox args={[0.8, 0.7, 1.7]} radius={0.24} smoothness={8} position={[-1.52, 0.64, 0]} castShadow>
-            <primitive object={paint} attach="material" />
-          </RoundedBox>
-          {/* Tapered tail */}
-          <mesh position={[1.45, 0.74, 0]} scale={[0.95, 0.42, 0.74]} castShadow>
-            <sphereGeometry args={[0.72, 40, 24]} />
-            <primitive object={paint} attach="material" />
+        <group scale={0.88} position={[0, -0.06, 0]}>
+          {/* ---- Body ---- */}
+          <mesh geometry={geo.body} material={paint} castShadow receiveShadow />
+          <RoundedBox args={[3.9, 0.1, 1.6]} radius={0.04} smoothness={3} position={[0.05, 0.36, 0]} material={black} castShadow />
+
+          {/* ---- Greenhouse: glass shell, white spine, cabin floor ---- */}
+          <mesh geometry={geo.glass} castShadow>
+            <meshPhysicalMaterial color="#0b121c" roughness={0.03} metalness={0.35} clearcoat={1} transparent opacity={0.82} />
           </mesh>
+          <mesh geometry={geo.spine} material={stripe} />
+          <RoundedBox args={[1.25, 0.025, 0.24]} radius={0.012} smoothness={2} position={[-1.48, 1.045, 0]} material={stripe} />
+          <RoundedBox args={[2.6, 0.02, CABIN_HALF * 2]} radius={0.01} smoothness={2} position={[0.45, 1.05, 0]}>
+            <meshStandardMaterial color="#14171c" roughness={0.8} />
+          </RoundedBox>
 
-          {/* ---- Signature front: centre spine, turbine intakes, LED brackets ---- */}
-          <RoundedBox args={[0.08, 0.64, 0.24]} radius={0.035} smoothness={3} position={[-1.94, 0.66, 0]} material={stripe} />
-          <RoundedBox args={[0.06, 0.6, 0.03]} radius={0.012} smoothness={2} position={[-1.935, 0.66, 0.135]} material={black} />
-          <RoundedBox args={[0.06, 0.6, 0.03]} radius={0.012} smoothness={2} position={[-1.935, 0.66, -0.135]} material={black} />
-          <TurbineIntake z={0.47} animate={animate} />
-          <TurbineIntake z={-0.47} animate={animate} />
-
-          {[1, -1].map((s) => (
-            <group key={s}>
-              <Emissive args={[0.05, 0.46, 0.05]} position={[-1.9, 0.68, 0.8 * s]} rotation={[0.12 * s, 0, 0]} color="#f4f9ff" />
-              <Emissive args={[0.05, 0.05, 0.2]} position={[-1.88, 0.92, 0.71 * s]} color="#f4f9ff" />
-              <Emissive args={[0.05, 0.05, 0.14]} position={[-1.88, 0.43, 0.74 * s]} color="#f4f9ff" />
+          {/* ---- Interior: two seats, dash, wheel ---- */}
+          {[0.24, -0.24].map((z) => (
+            <group key={z} position={[0.35, 1.06, z]}>
+              <RoundedBox args={[0.42, 0.1, 0.36]} radius={0.04} smoothness={3} position={[0, 0.05, 0]}>
+                <meshStandardMaterial color="#26201c" roughness={0.65} />
+              </RoundedBox>
+              <RoundedBox args={[0.1, 0.4, 0.36]} radius={0.04} smoothness={3} position={[0.2, 0.22, 0]} rotation={[0, 0, -0.25]}>
+                <meshStandardMaterial color="#26201c" roughness={0.65} />
+              </RoundedBox>
             </group>
           ))}
-
-          {/* Splitter */}
-          <RoundedBox args={[0.32, 0.08, 1.56]} radius={0.035} smoothness={3} position={[-1.78, 0.3, 0]} material={black} />
-
-          {/* Hood + roof spine stripe, flowing nose to tail */}
-          <RoundedBox args={[1.35, 0.05, 0.24]} radius={0.02} smoothness={2} position={[-1.22, 1.0, 0]} material={stripe} />
-          <RoundedBox args={[0.78, 0.06, 0.2]} radius={0.02} smoothness={2} position={[-0.34, 1.2, 0]} rotation={[0, 0, 0.52]} material={stripe} />
-          <RoundedBox args={[1.25, 0.07, 0.4]} radius={0.03} smoothness={3} position={[0.42, 1.41, 0]} material={stripe} />
-          <RoundedBox args={[0.8, 0.05, 0.2]} radius={0.02} smoothness={2} position={[1.36, 1.2, 0]} rotation={[0, 0, -0.5]} material={stripe} />
-
-          {/* Windshield and rear glass */}
-          <RoundedBox args={[0.8, 0.04, 1.08]} radius={0.016} smoothness={2} position={[-0.36, 1.18, 0]} rotation={[0, 0, 0.52]}>
-            <meshPhysicalMaterial color="#0b121c" roughness={0.04} metalness={0.4} clearcoat={1} />
+          <RoundedBox args={[0.3, 0.1, CABIN_HALF * 1.8]} radius={0.04} smoothness={3} position={[-0.62, 1.12, 0]}>
+            <meshStandardMaterial color="#111318" roughness={0.5} />
           </RoundedBox>
-          <RoundedBox args={[0.82, 0.04, 0.84]} radius={0.016} smoothness={2} position={[1.36, 1.18, 0]} rotation={[0, 0, -0.5]}>
-            <meshPhysicalMaterial color="#0b121c" roughness={0.04} metalness={0.4} clearcoat={1} />
-          </RoundedBox>
+          <mesh position={[-0.42, 1.2, 0.24]} rotation={[0, Math.PI / 2, 0.35]}>
+            <torusGeometry args={[0.09, 0.015, 8, 28]} />
+            <meshStandardMaterial color="#0b0c0f" roughness={0.4} />
+          </mesh>
 
-          {/* Cabin seats (visible when doors open) */}
-          {[0.3, -0.3].map((z) => (
-            <RoundedBox key={z} args={[0.5, 0.5, 0.4]} radius={0.1} smoothness={4} position={[0.35, 1.08, z]} rotation={[0, 0, -0.2]}>
-              <meshStandardMaterial color="#1b1e24" roughness={0.7} />
-            </RoundedBox>
-          ))}
+          <GullwingDoor side={1} open={doorsOpen} geometry={geo.door} />
+          <GullwingDoor side={-1} open={doorsOpen} geometry={geo.door} />
 
-          <GullwingDoor side={1} open={doorsOpen} paint={paint} />
-          <GullwingDoor side={-1} open={doorsOpen} paint={paint} />
-
-          {/* Lower aero blade + side intakes */}
-          <RoundedBox args={[3.1, 0.16, 1.5]} radius={0.07} smoothness={4} position={[0.05, 0.4, 0]} material={black} castShadow />
+          {/* ---- Signature front: centre spine, turbine intakes, LED brackets ---- */}
+          <RoundedBox args={[0.06, 0.58, 0.24]} radius={0.028} smoothness={3} position={[-2.125, 0.7, 0]} material={stripe} />
           {[1, -1].map((s) => (
-            <RoundedBox key={s} args={[0.62, 0.17, 0.04]} radius={0.05} smoothness={3} position={[0.78, 0.66, 0.8 * s]} material={black} />
+            <RoundedBox key={s} args={[0.05, 0.56, 0.03]} radius={0.012} smoothness={2} position={[-2.12, 0.7, 0.135 * s]} material={black} />
+          ))}
+          <TurbineIntake z={0.47} animate={animate} />
+          <TurbineIntake z={-0.47} animate={animate} />
+          {[1, -1].map((s) => (
+            <group key={s}>
+              <Emissive args={[0.04, 0.44, 0.045]} position={[-2.09, 0.7, 0.79 * s]} rotation={[0.1 * s, 0, 0]} color="#f4f9ff" />
+              <Emissive args={[0.04, 0.045, 0.18]} position={[-2.08, 0.93, 0.71 * s]} color="#f4f9ff" />
+              <Emissive args={[0.04, 0.045, 0.12]} position={[-2.08, 0.47, 0.74 * s]} color="#f4f9ff" />
+            </group>
+          ))}
+          <RoundedBox args={[0.36, 0.06, 1.5]} radius={0.025} smoothness={3} position={[-1.98, 0.32, 0]} material={black} />
+
+          {/* Side intakes */}
+          {[1, -1].map((s) => (
+            <RoundedBox key={s} args={[0.7, 0.15, 0.03]} radius={0.05} smoothness={3} position={[0.95, 0.68, 0.81 * s]} material={black} />
           ))}
 
-          {/* Two front wheels, one rear */}
-          <Wheel position={[-1.12, 0.34, 0.9]} sport={sport} />
-          <Wheel position={[-1.12, 0.34, -0.9]} sport={sport} />
-          <Wheel position={[1.42, 0.34, 0]} sport={sport} />
+          {/* ---- Wheels: two front at the corners with arch trims, one rear ---- */}
+          {[1, -1].map((s) => (
+            <group key={s}>
+              <Wheel position={[-1.38, 0.34, 0.93 * s]} sport={sport} />
+              <mesh position={[-1.38, 0.34, 0.93 * s]} material={paint}>
+                <torusGeometry args={[0.52, 0.045, 10, 40, Math.PI]} />
+              </mesh>
+            </group>
+          ))}
+          <Wheel position={[1.55, 0.34, 0]} sport={sport} />
 
           {/* Tail light bar */}
-          <Emissive args={[0.08, 0.07, 0.92]} position={[2.08, 0.78, 0]} color={accent} />
+          <Emissive args={[0.05, 0.06, 1.1]} position={[2.2, 0.82, 0]} color={accent} />
         </group>
       </Float>
     </group>
@@ -460,7 +538,7 @@ export function BricklinScene({
       ? { position: [-5.6, 2.3, 6.4] as Vec3, fov: 34 }
       : preset === 'detail'
         ? { position: [-5.8, 2.1, 6.4] as Vec3, fov: 32 }
-        : { position: [-6.1, 2.6, 9.6] as Vec3, fov: 33 };
+        : { position: [-5.5, 2.4, 8.7] as Vec3, fov: 33 };
 
   return (
     <div ref={stage} className={`relative bg-[#06070a] ${className}`} aria-label="Interactive 3D model of the Bricklin 3EV">
